@@ -5,23 +5,54 @@ import "./App.css";
 
 function App() {
   const [movies, setMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [retryTimer, setretryTimer] = useState();
+  const [check, setCheck] = useState(false)
+  
   async function fetchMovieHandler() {
-    setIsLoading(true)
-    const response = await fetch("https://swapi.dev/api/films/");
-        const data = await response.json();
-        const transformedMovies = data.results.map((moviesData) => {
-          return {
-            id: moviesData.episode_id,
-            title: moviesData.title,
-            openingText: moviesData.opening_crawl,
-            releaseDate: moviesData.release_date,
-          };
-        });
-        setMovies(transformedMovies);
-        setIsLoading(false)
-      }
+    setIsLoading(true);
+    setError(null);
 
+    try {
+      const response = await fetch("https://swapi.dev/api/film/");
+
+      if (!response.ok) {
+        throw new Error("Something Went Wrong! ...Retrying");
+      }
+      const data = await response.json();
+
+      const transformedMovies = data.results.map((moviesData) => {
+        return {
+          id: moviesData.episode_id,
+          title: moviesData.title,
+          openingText: moviesData.opening_crawl,
+          releaseDate: moviesData.release_date,
+        };
+      });
+      setMovies(transformedMovies);
+    } catch (error) {
+      setError(error.message);
+      setCheck(true);
+      
+        
+        const retry_Timer = setTimeout(() => {
+          fetchMovieHandler();
+        }, 5000);
+      setretryTimer(retry_Timer)
+      
+      
+    }
+    setIsLoading(false);
+  }
+  
+
+  const cancelRetryHandler = () => {
+    
+    clearTimeout(retryTimer)
+    setCheck(false)
+    
+  };
 
   return (
     <React.Fragment>
@@ -31,6 +62,13 @@ function App() {
       </section>
       <section>
         <MoviesList movies={movies} />
+        {check && !isLoading && error && (
+          <p>
+            {error}{" "}
+            <button onClick={cancelRetryHandler}>Cancel Retrying</button>
+          </p>
+        )}
+        {!check && !isLoading && error && <p>Nothing to Show</p>}
       </section>
     </React.Fragment>
   );
